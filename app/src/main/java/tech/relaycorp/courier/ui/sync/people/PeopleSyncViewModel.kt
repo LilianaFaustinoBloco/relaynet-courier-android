@@ -56,24 +56,32 @@ class PeopleSyncViewModel
                 when (it) {
                     WifiHotspotState.Enabled -> privateSync.startSync()
                     WifiHotspotState.Disabled -> {
-                        openHotspotInstructions.send(Unit)
-                        finish.send(Finish)
+                        if (android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.S_V2) {
+                            openHotspotInstructions.send(Unit)
+                            finish.send(Finish)
+                        } else {
+                            // Because WIFI_AP_STATE_CHANGE is not detectable on API 33, the workaround
+                            // was to detect if localhost IP address is working
+                            privateSync.startSync()
+                        }
+
                     }
                 }
             }
             .launchIn(scope)
 
-        wifiHotspotStateReceiver
-            .state()
-            .drop(1)
-            .filter { it == WifiHotspotState.Disabled }
-            .onEach {
-                privateSync.stopSync()
-                openHotspotInstructions.send(Unit)
-                finish.send(Finish)
-            }
-            .launchIn(scope)
-
+        if (android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.S_V2) {
+            wifiHotspotStateReceiver
+                .state()
+                .drop(1)
+                .filter { it == WifiHotspotState.Disabled }
+                .onEach {
+                    privateSync.stopSync()
+                    openHotspotInstructions.send(Unit)
+                    finish.send(Finish)
+                }
+                .launchIn(scope)
+        }
         privateSync
             .clientsConnected()
             .filter { it > 0 }
@@ -94,6 +102,10 @@ class PeopleSyncViewModel
                         State.Syncing.WaitingFirstClient
                     }
                 )
+                PrivateSync.State.HotspotDisabled -> {
+                    openHotspotInstructions.send(Unit)
+                    finish.send(Finish)
+                }
                 PrivateSync.State.Stopped -> finish.send(Finish)
                 PrivateSync.State.Error -> state.send(State.Error)
             }

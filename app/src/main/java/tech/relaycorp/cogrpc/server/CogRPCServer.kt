@@ -47,7 +47,14 @@ internal constructor(
         withContext(Dispatchers.IO) {
             setupTLSProvider()
 
-            val certGenerator = tlsCertificateGeneratorProvider(Networking.getGatewayIpAddress())
+            val gatewayIPAddress = try {
+                Networking.getGatewayIpAddress()
+            } catch (exception: GatewayIPAddressException) {
+                onForcedStop.invoke(exception)
+                return@withContext
+            }
+
+            val certGenerator = tlsCertificateGeneratorProvider(gatewayIPAddress)
 
             val server = NettyServerBuilder
                 .forAddress(InetSocketAddress(hostname, port))

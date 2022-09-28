@@ -100,8 +100,14 @@ class MainActivity : BaseActivity() {
             if (isEnabled) R.string.sync_people_enabled else R.string.sync_people_disabled
         )
 
-        hotspotLabel.isVisible = isEnabled
-        hotspotIcon.isVisible = isEnabled
+        if (android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.S_V2) {
+            hotspotLabel.isVisible = isEnabled
+            hotspotIcon.isVisible = isEnabled
+        } else {
+            hotspotLabel.isVisible = false
+            hotspotIcon.isVisible = false
+        }
+
         if (state is MainViewModel.SyncPeopleState.Enabled) {
             val isHotspotEnabled = state.hotspotState == WifiHotspotState.Enabled
             hotspotIcon.isActivated = isHotspotEnabled

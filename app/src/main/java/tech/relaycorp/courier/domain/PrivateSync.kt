@@ -3,6 +3,7 @@ package tech.relaycorp.courier.domain
 import kotlinx.coroutines.channels.trySendBlocking
 import kotlinx.coroutines.flow.asFlow
 import tech.relaycorp.cogrpc.server.CogRPCServer
+import tech.relaycorp.cogrpc.server.GatewayIPAddressException
 import tech.relaycorp.courier.common.BehaviorChannel
 import tech.relaycorp.courier.domain.server.ServerService
 import javax.inject.Inject
@@ -23,7 +24,10 @@ class PrivateSync
 
         state.send(State.Starting)
         cogRPCServer.start(service) {
-            state.trySendBlocking(State.Error)
+            when (it) {
+                is GatewayIPAddressException -> state.trySendBlocking(State.HotspotDisabled)
+                else -> state.trySendBlocking(State.Error)
+            }
         }
         if (state.value == State.Starting) state.send(State.Syncing)
     }
@@ -34,6 +38,6 @@ class PrivateSync
     }
 
     enum class State {
-        Starting, Syncing, Stopped, Error
+        Starting, Syncing, Stopped, HotspotDisabled, Error
     }
 }
